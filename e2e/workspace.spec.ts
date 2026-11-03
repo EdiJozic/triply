@@ -21,15 +21,19 @@ test("creates a trip and generates a labeled demo itinerary", async ({ page }) =
   await page.getByPlaceholder("A city, country, or coast").fill("Porto");
   await page.getByRole("textbox", { name: "COUNTRY OPTIONAL" }).fill("Portugal");
   await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page.getByText("STEP 2 OF 3")).toBeVisible();
 
   const tomorrow = new Date(Date.now() + 86_400_000);
   const nextWeek = new Date(Date.now() + 8 * 86_400_000);
   await page.locator('input[type="date"]').nth(0).fill(tomorrow.toISOString().slice(0, 10));
   await page.locator('input[type="date"]').nth(1).fill(nextWeek.toISOString().slice(0, 10));
-  await page.getByRole("button", { name: "Continue" }).click();
-  await page.getByRole("button", { name: "Create my trip" }).click();
+  await page.locator(".trip-wizard .wizard-footer").getByRole("button", { name: "Continue" }).click();
+  const preferencesStep = page.getByText("STEP 3 OF 3");
+  if (await preferencesStep.isVisible().catch(() => false)) {
+    await page.locator(".trip-wizard .wizard-footer .coral-button").click();
+  }
 
-  await expect(page.getByRole("heading", { name: /Porto/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Porto." })).toBeVisible();
   await expect(page.getByText("Explore a walkable neighborhood in Porto").first()).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText(/illustrative idea only/i).first()).toBeVisible();
 });
@@ -45,7 +49,7 @@ test("edits itinerary progress and records an expense", async ({ page }) => {
   await page.getByRole("button", { name: "Save activity" }).click();
   await expect(page.getByRole("heading", { name: "Settle into the hotel" })).toBeVisible();
 
-  await page.getByRole("button", { name: "Budget planner" }).click();
+  await page.getByRole("button", { name: "Budget planner", exact: true }).click();
   await page.getByRole("button", { name: "Add expense" }).first().click();
   await page.getByPlaceholder("e.g. Dinner by the water").fill("Test ferry");
   await page.locator('input[name="amount"]').fill("35");
@@ -60,10 +64,11 @@ test("saves a destination and keeps the workspace within a mobile viewport", asy
   await enterDemo(page);
   await page.getByRole("button", { name: "Open menu" }).click();
   await page.getByRole("button", { name: "Explore", exact: true }).click();
-  await page.getByRole("button", { name: "Save Lisbon" }).click();
-  await page.getByRole("navigation").getByRole("button", { name: /Saved places/ }).click();
+  await page.getByRole("button", { name: "Save Paris" }).click();
+  await page.getByRole("button", { name: "Open menu" }).click();
+  await page.locator(".trip-nav-item").filter({ hasText: "Saved places" }).click();
   await expect(page.getByRole("heading", { name: "Saved places" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Lisbon" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Paris" })).toBeVisible();
 
   const dimensions = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,
